@@ -1,0 +1,17 @@
+# Dependencies (recreated automatically by "npm install" — no need to upload)
+node_modules/
+
+# Secret keys / environment variables — NEVER commit these
+.env
+.env.local
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
+
+# Logs
+*.log

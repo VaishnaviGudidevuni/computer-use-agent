@@ -1,0 +1,15 @@
+<html>
+<head><title>Core Banking Portal - Member Detail</title></head>
+<body>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><td colspan="2" bgcolor="#cccccc"><b>Member Detail</b></td></tr>
+  <tr><td>Member ID</td><td><%= member.id %></td></tr>
+  <tr><td>Name</td><td><%= member.name %></td></tr>
+  <tr><td>Current Balance</td><td>$<%= member.balance.toFixed(2) %></td></tr>
+</table>
+<p>
+  <a href="/members/<%= member.id %>/sub-account/new">Open a new sub-account for this member</a>
+</p>
+<p><a href="/members/search">Back to search</a></p>
+</body>
+</html>

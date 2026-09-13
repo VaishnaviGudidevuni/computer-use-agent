@@ -1,0 +1,20 @@
+<html>
+<head><title>Core Banking Portal - Member Search</title></head>
+<body>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><td bgcolor="#cccccc"><b>Member Search</b></td></tr>
+  <% if (error) { %>
+    <tr><td><font color="red"><%= error %></font></td></tr>
+  <% } %>
+  <tr>
+    <td>
+      <form method="GET" action="/members/search/results">
+        Member ID: <input type="text" name="memberId" value="<%= query %>">
+        <input type="submit" value="Search">
+      </form>
+    </td>
+  </tr>
+</table>
+<p>(Try member IDs: 10001, 10002, 10003)</p>
+</body>
+</html>

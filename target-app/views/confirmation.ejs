@@ -1,0 +1,19 @@
+<html>
+<head><title>Core Banking Portal - Confirmation</title></head>
+<body>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><td bgcolor="#cccccc"><b>Sub-Account Created</b></td></tr>
+  <tr>
+    <td>
+      <!-- On purpose: the confirmation details live inside an iframe,
+           the way some real legacy banking systems embed a "panel"
+           as a separate mini-page. Automation has to know to look
+           inside the iframe, not just the outer page. -->
+      <iframe src="/confirmation-panel?accountNumber=<%= account.accountNumber %>&accountType=<%= account.accountType %>&openingDeposit=<%= account.openingDeposit %>&memberId=<%= member.id %>"
+              width="400" height="150" frameborder="1"></iframe>
+    </td>
+  </tr>
+</table>
+<p><a href="/members/<%= member.id %>">Back to member detail</a></p>
+</body>
+</html>
