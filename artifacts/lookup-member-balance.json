@@ -1,0 +1,81 @@
+{
+  "id": "lookup-member-balance",
+  "name": "Look up a member and read their current balance",
+  "version": "1.0.0",
+  "createdAt": "2026-09-13T00:00:00.000Z",
+  "createdFrom": "manual",
+
+  "target": {
+    "appName": "fake-bank-target-app",
+    "baseUrl": "http://localhost:4000",
+    "entryPoint": "/members/search"
+  },
+
+  "parameters": [
+    {
+      "name": "memberId",
+      "type": "string",
+      "required": true,
+      "description": "The ID of the member to look up, e.g. 10001"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "balance",
+      "type": "string",
+      "description": "The member's current balance as shown on screen",
+      "sourceStepId": "step_3"
+    }
+  ],
+
+  "steps": [
+    {
+      "id": "step_1",
+      "description": "Type the member ID into the search box",
+      "action": "type",
+      "locator": {
+        "strategy": "css",
+        "value": "input[name='memberId']",
+        "fallbacks": [
+          { "strategy": "xpath", "value": "//input[@name='memberId']" }
+        ]
+      },
+      "value": "{{memberId}}"
+    },
+    {
+      "id": "step_2",
+      "description": "Click the Search button",
+      "action": "click",
+      "locator": {
+        "strategy": "text",
+        "value": "Search",
+        "fallbacks": [
+          { "strategy": "css", "value": "input[type='submit']" }
+        ]
+      },
+      "checkpoint": {
+        "type": "urlContains",
+        "expected": "/members/"
+      }
+    },
+    {
+      "id": "step_3",
+      "description": "Read the current balance off the member detail page",
+      "action": "extract",
+      "locator": {
+        "strategy": "text",
+        "value": "Current Balance",
+        "fallbacks": []
+      },
+      "extractAs": "balance"
+    }
+  ],
+
+  "successCondition": {
+    "type": "textVisible",
+    "expected": "Current Balance"
+  },
+
+  "riskLevel": "safe"
+}
