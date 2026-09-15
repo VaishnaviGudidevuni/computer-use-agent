@@ -31,17 +31,27 @@ export class ReplayEngine {
   ): Promise<ReplayResult> {
     const outputs: Record<string, unknown> = {};
 
+    let currentStepId = "unknown";
+
     try {
-      this.validateParameters(artifact, parameters);
+      this.validateParameters(
+        artifact,
+        parameters,
+      );
 
       for (const step of artifact.steps) {
+        currentStepId = step.id;
+
         console.log(
           `[REPLAY] ${step.id}: ${step.description}`,
         );
 
         switch (step.action) {
           case "navigate":
-            await this.navigate(step.value, parameters);
+            await this.navigate(
+              step.value,
+              parameters,
+            );
             break;
 
           case "click":
@@ -83,12 +93,19 @@ export class ReplayEngine {
         }
 
         if (step.checkpoint) {
-          await this.verifyCheckpoint(step.checkpoint);
+          await this.verifyCheckpoint(
+            step.checkpoint,
+          );
         }
       }
 
       await this.verifySuccessCondition(
         artifact.successCondition,
+        outputs,
+      );
+
+      console.log(
+        "[REPLAY] Replay completed successfully.",
       );
 
       return {
@@ -101,13 +118,17 @@ export class ReplayEngine {
           ? error.message
           : String(error);
 
-      const currentStep =
-        artifact.steps.find((step) =>
-          message.includes(step.id),
-        ) ??
-        artifact.steps[artifact.steps.length - 1];
+      console.error(
+        `[REPLAY ERROR] Step: ${currentStepId}`,
+      );
 
-      if (message.includes("No member found")) {
+      console.error(
+        `[REPLAY ERROR] ${message}`,
+      );
+
+      if (
+        message.includes("No member found")
+      ) {
         return {
           status: "business_outcome",
           outcome: "member_not_found",
@@ -117,7 +138,7 @@ export class ReplayEngine {
 
       return {
         status: "hard_failure",
-        stepId: currentStep?.id ?? "unknown",
+        stepId: currentStepId,
         message,
       };
     }
@@ -128,13 +149,44 @@ export class ReplayEngine {
     parameters: Record<string, unknown>,
   ): void {
     for (const parameter of artifact.parameters) {
+      const value =
+        parameters[parameter.name];
+
       if (
         parameter.required &&
-        (parameters[parameter.name] === undefined ||
-          parameters[parameter.name] === null)
+        (value === undefined ||
+          value === null ||
+          value === "")
       ) {
         throw new Error(
           `Missing required parameter: ${parameter.name}`,
+        );
+      }
+
+      if (
+        parameter.type === "number" &&
+        typeof value !== "number"
+      ) {
+        throw new Error(
+          `Parameter "${parameter.name}" must be a number.`,
+        );
+      }
+
+      if (
+        parameter.type === "boolean" &&
+        typeof value !== "boolean"
+      ) {
+        throw new Error(
+          `Parameter "${parameter.name}" must be a boolean.`,
+        );
+      }
+
+      if (
+        parameter.type === "string" &&
+        typeof value !== "string"
+      ) {
+        throw new Error(
+          `Parameter "${parameter.name}" must be a string.`,
         );
       }
     }
@@ -155,6 +207,8 @@ export class ReplayEngine {
       parameters,
     );
 
+    console.log(`[NAVIGATE] ${url}`);
+
     await this.page.goto(url, {
       waitUntil: "domcontentloaded",
     });
@@ -163,7 +217,8 @@ export class ReplayEngine {
   private async click(
     target?: Artifact["steps"][number]["target"],
   ): Promise<void> {
-    const locator = await this.findTarget(target);
+    const locator =
+      await this.findTarget(target);
 
     await locator.click();
   }
@@ -179,14 +234,20 @@ export class ReplayEngine {
       );
     }
 
-    const locator = await this.findTarget(target);
+    const locator =
+      await this.findTarget(target);
 
-    const resolvedValue = this.replaceParameters(
-      value,
-      parameters,
-    );
+    const resolvedValue =
+      this.replaceParameters(
+        value,
+        parameters,
+      );
 
     await locator.fill(resolvedValue);
+
+    console.log(
+      `[TYPE] Entered value for parameterized field.`,
+    );
   }
 
   private async select(
@@ -200,14 +261,18 @@ export class ReplayEngine {
       );
     }
 
-    const locator = await this.findTarget(target);
+    const locator =
+      await this.findTarget(target);
 
-    const resolvedValue = this.replaceParameters(
-      value,
-      parameters,
+    const resolvedValue =
+      this.replaceParameters(
+        value,
+        parameters,
+      );
+
+    await locator.selectOption(
+      resolvedValue,
     );
-
-    await locator.selectOption(resolvedValue);
   }
 
   private async extract(
@@ -221,11 +286,46 @@ export class ReplayEngine {
       );
     }
 
-    const locator = await this.findTarget(target);
+    const locator =
+      await this.findTarget(target);
 
-    const text = await locator.textContent();
+    const text =
+      await locator.textContent();
 
-    outputs[outputName] = text?.trim() ?? "";
+    const extractedValue =
+      text?.trim() ?? "";
+
+    outputs[outputName] =
+      this.normalizeExtractedValue(
+        outputName,
+        extractedValue,
+      );
+
+    console.log(
+      `[EXTRACT] ${outputName}: ${outputs[outputName]}`,
+    );
+  }
+
+  private normalizeExtractedValue(
+    outputName: string,
+    value: string,
+  ): unknown {
+    if (
+      outputName === "savingsBalance"
+    ) {
+      const cleaned = value
+        .replace(/[$,]/g, "")
+        .trim();
+
+      const numberValue =
+        Number(cleaned);
+
+      if (!Number.isNaN(numberValue)) {
+        return numberValue;
+      }
+    }
+
+    return value;
   }
 
   private async wait(
@@ -234,6 +334,15 @@ export class ReplayEngine {
     const milliseconds = Number(
       value ?? "1000",
     );
+
+    if (
+      Number.isNaN(milliseconds) ||
+      milliseconds < 0
+    ) {
+      throw new Error(
+        `Invalid wait duration: ${value}`,
+      );
+    }
 
     await this.page.waitForTimeout(
       milliseconds,
@@ -258,15 +367,28 @@ export class ReplayEngine {
 
     for (const strategy of strategies) {
       try {
+        console.log(
+          `[LOCATOR] Trying ${strategy.type}: ${strategy.value}`,
+        );
+
         switch (strategy.type) {
           case "role": {
-            const [role, name] =
+            const parts =
               strategy.value.split(":");
 
-            if (role === "button" && name) {
+            const role = parts[0];
+            const name =
+              parts.slice(1).join(":");
+
+            if (
+              role === "button" &&
+              name
+            ) {
               return this.page.getByRole(
                 "button",
-                { name },
+                {
+                  name,
+                },
               );
             }
 
@@ -324,12 +446,25 @@ export class ReplayEngine {
       `[CHECKPOINT] ${checkpoint}`,
     );
 
-    if (checkpoint.includes("Login page")) {
+    if (
+      checkpoint.includes(
+        "Member Search",
+      )
+    ) {
       await this.page
-        .getByText("Legacy Bank Login")
+        .getByText("Member Search", {
+          exact: true,
+        })
         .waitFor({
           state: "visible",
+          timeout: 5000,
         });
+
+      console.log(
+        "[CHECKPOINT PASSED] Member Search page is visible.",
+      );
+
+      return;
     }
 
     if (
@@ -337,28 +472,96 @@ export class ReplayEngine {
         "Member search result",
       )
     ) {
-      await this.page.waitForLoadState(
-        "domcontentloaded",
+      await this.page.waitForURL(
+        /\/members\/\d+/,
+        {
+          timeout: 5000,
+        },
       );
+
+      console.log(
+        "[CHECKPOINT PASSED] Member details page is open.",
+      );
+
+      return;
     }
 
     if (
       checkpoint.includes(
         "Savings balance",
+      ) ||
+      checkpoint.includes(
+        "Current balance",
       )
     ) {
-      await this.page.waitForLoadState(
-        "domcontentloaded",
+      await this.page
+        .getByText(
+          "Current Balance",
+          {
+            exact: true,
+          },
+        )
+        .waitFor({
+          state: "visible",
+          timeout: 5000,
+        });
+
+      console.log(
+        "[CHECKPOINT PASSED] Current balance is visible.",
       );
+
+      return;
     }
+
+    console.log(
+      `[CHECKPOINT] No specific verification rule for: ${checkpoint}`,
+    );
   }
 
   private async verifySuccessCondition(
     condition: string,
+    outputs: Record<string, unknown>,
   ): Promise<void> {
     console.log(
       `[SUCCESS CHECK] ${condition}`,
     );
+
+    if (
+      condition.includes(
+        "current balance",
+      ) ||
+      condition.includes(
+        "savings balance",
+      )
+    ) {
+      await this.page
+        .getByText(
+          "Current Balance",
+          {
+            exact: true,
+          },
+        )
+        .waitFor({
+          state: "visible",
+          timeout: 5000,
+        });
+
+      if (
+        outputs.savingsBalance ===
+          undefined ||
+        outputs.savingsBalance === ""
+      ) {
+        throw new Error(
+          "Success condition failed: savings balance was not extracted.",
+        );
+      }
+
+      console.log(
+        "[SUCCESS CHECK PASSED] Current balance was extracted.",
+      );
+
+      return;
+    }
 
     await this.page.waitForLoadState(
       "domcontentloaded",
@@ -372,9 +575,12 @@ export class ReplayEngine {
     return value.replace(
       /\{\{(\w+)\}\}/g,
       (_match, name: string) => {
-        const parameter = parameters[name];
+        const parameter =
+          parameters[name];
 
-        if (parameter === undefined) {
+        if (
+          parameter === undefined
+        ) {
           return `{{${name}}}`;
         }
 

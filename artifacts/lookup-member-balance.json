@@ -1,8 +1,8 @@
 {
   "id": "lookup-member-balance",
   "name": "Look Up Member Balance",
-  "version": "1.0.0",
-  "description": "Look up a member and return their current savings balance.",
+  "version": "1.0.4",
+  "description": "Look up a member and return their current balance.",
   "target": {
     "appName": "Legacy Mock Bank",
     "baseUrl": "http://localhost:4000"
@@ -19,33 +19,33 @@
     {
       "name": "memberName",
       "type": "string",
-      "description": "The name of the member."
+      "description": "The member's name shown on the member detail page."
     },
     {
       "name": "savingsBalance",
       "type": "number",
-      "description": "The member's current savings account balance."
+      "description": "The member's current balance as a number."
     }
   ],
   "steps": [
     {
-      "id": "login",
+      "id": "open-member-search",
       "action": "navigate",
-      "description": "Open the banking application login page.",
+      "description": "Open the banking application's member search page.",
       "value": "http://localhost:4000",
-      "checkpoint": "Login page is visible."
+      "checkpoint": "Member Search page is visible."
     },
     {
       "id": "enter-member-id",
       "action": "type",
       "description": "Enter the member ID into the member search field.",
       "target": {
-        "type": "label",
-        "value": "Member ID",
+        "type": "css",
+        "value": "input[name=\"memberId\"]",
         "fallback": [
           {
-            "type": "css",
-            "value": "input[name=\"memberId\"]"
+            "type": "xpath",
+            "value": "//input[@name=\"memberId\"]"
           }
         ]
       },
@@ -54,14 +54,14 @@
     {
       "id": "search-member",
       "action": "click",
-      "description": "Submit the member search.",
+      "description": "Click the Search button.",
       "target": {
         "type": "role",
         "value": "button:Search",
         "fallback": [
           {
-            "type": "text",
-            "value": "Search"
+            "type": "css",
+            "value": "input[type=\"submit\"]"
           }
         ]
       },
@@ -70,26 +70,38 @@
     {
       "id": "read-member-name",
       "action": "extract",
-      "description": "Read the member's name from the member details page.",
+      "description": "Read the member's name from the member detail table.",
       "target": {
-        "type": "text",
-        "value": "Member Name"
+        "type": "xpath",
+        "value": "//tr[td[1][normalize-space()='Name']]/td[2]",
+        "fallback": [
+          {
+            "type": "css",
+            "value": "tr:nth-of-type(3) td:nth-of-type(2)"
+          }
+        ]
       },
       "output": "memberName"
     },
     {
       "id": "read-savings-balance",
       "action": "extract",
-      "description": "Read the current savings balance.",
+      "description": "Read the current balance from the member detail table.",
       "target": {
-        "type": "text",
-        "value": "Savings Balance"
+        "type": "xpath",
+        "value": "//tr[td[1][normalize-space()='Current Balance']]/td[2]",
+        "fallback": [
+          {
+            "type": "css",
+            "value": "tr:nth-of-type(4) td:nth-of-type(2)"
+          }
+        ]
       },
       "output": "savingsBalance",
-      "checkpoint": "Savings balance is available."
+      "checkpoint": "Current balance is available."
     }
   ],
-  "successCondition": "The member details page is displayed and a savings balance has been extracted.",
-  "createdAt": "2026-09-14T00:00:00.000Z",
+  "successCondition": "The member detail page is displayed and the current balance has been extracted.",
+  "createdAt": "2026-09-15T00:00:00.000Z",
   "status": "draft"
 }
