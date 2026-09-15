@@ -1,81 +1,95 @@
 {
   "id": "lookup-member-balance",
-  "name": "Look up a member and read their current balance",
+  "name": "Look Up Member Balance",
   "version": "1.0.0",
-  "createdAt": "2026-09-13T00:00:00.000Z",
-  "createdFrom": "manual",
-
+  "description": "Look up a member and return their current savings balance.",
   "target": {
-    "appName": "fake-bank-target-app",
-    "baseUrl": "http://localhost:4000",
-    "entryPoint": "/members/search"
+    "appName": "Legacy Mock Bank",
+    "baseUrl": "http://localhost:4000"
   },
-
   "parameters": [
     {
       "name": "memberId",
       "type": "string",
-      "required": true,
-      "description": "The ID of the member to look up, e.g. 10001"
+      "description": "The member ID to look up.",
+      "required": true
     }
   ],
-
   "outputs": [
     {
-      "name": "balance",
+      "name": "memberName",
       "type": "string",
-      "description": "The member's current balance as shown on screen",
-      "sourceStepId": "step_3"
+      "description": "The name of the member."
+    },
+    {
+      "name": "savingsBalance",
+      "type": "number",
+      "description": "The member's current savings account balance."
     }
   ],
-
   "steps": [
     {
-      "id": "step_1",
-      "description": "Type the member ID into the search box",
+      "id": "login",
+      "action": "navigate",
+      "description": "Open the banking application login page.",
+      "value": "http://localhost:4000",
+      "checkpoint": "Login page is visible."
+    },
+    {
+      "id": "enter-member-id",
       "action": "type",
-      "locator": {
-        "strategy": "css",
-        "value": "input[name='memberId']",
-        "fallbacks": [
-          { "strategy": "xpath", "value": "//input[@name='memberId']" }
+      "description": "Enter the member ID into the member search field.",
+      "target": {
+        "type": "label",
+        "value": "Member ID",
+        "fallback": [
+          {
+            "type": "css",
+            "value": "input[name=\"memberId\"]"
+          }
         ]
       },
       "value": "{{memberId}}"
     },
     {
-      "id": "step_2",
-      "description": "Click the Search button",
+      "id": "search-member",
       "action": "click",
-      "locator": {
-        "strategy": "text",
-        "value": "Search",
-        "fallbacks": [
-          { "strategy": "css", "value": "input[type='submit']" }
+      "description": "Submit the member search.",
+      "target": {
+        "type": "role",
+        "value": "button:Search",
+        "fallback": [
+          {
+            "type": "text",
+            "value": "Search"
+          }
         ]
       },
-      "checkpoint": {
-        "type": "urlContains",
-        "expected": "/members/"
-      }
+      "checkpoint": "Member search result is displayed."
     },
     {
-      "id": "step_3",
-      "description": "Read the current balance off the member detail page",
+      "id": "read-member-name",
       "action": "extract",
-      "locator": {
-        "strategy": "text",
-        "value": "Current Balance",
-        "fallbacks": []
+      "description": "Read the member's name from the member details page.",
+      "target": {
+        "type": "text",
+        "value": "Member Name"
       },
-      "extractAs": "balance"
+      "output": "memberName"
+    },
+    {
+      "id": "read-savings-balance",
+      "action": "extract",
+      "description": "Read the current savings balance.",
+      "target": {
+        "type": "text",
+        "value": "Savings Balance"
+      },
+      "output": "savingsBalance",
+      "checkpoint": "Savings balance is available."
     }
   ],
-
-  "successCondition": {
-    "type": "textVisible",
-    "expected": "Current Balance"
-  },
-
-  "riskLevel": "safe"
+  "successCondition": "The member details page is displayed and a savings balance has been extracted.",
+  "createdAt": "2026-09-14T00:00:00.000Z",
+  "status": "draft"
 }
