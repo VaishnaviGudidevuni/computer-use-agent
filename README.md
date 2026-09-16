@@ -1,4 +1,15 @@
+# Computer Use Agent
 
+A small computer-use automation system for a legacy-style banking web application.
+
+The system demonstrates two modes:
+
+1. **Discovery mode** — a local LLM observes the browser UI, chooses the next allowed action, and executes it.
+2. **Replay mode** — a previously created structured artifact is executed deterministically without asking the LLM to make new decisions.
+
+## Project Structure
+
+```text
 computer-use-agent/
 ├── artifacts/
 │   └── lookup-member-balance.json
@@ -33,3 +44,10 @@ computer-use-agent/
 ├── target-app/
 ├── package.json
 └── tsconfig.json
+```
+
+## Setup
+
+**Requirements**
+- Node.js 18+
+- [Ollama](https://ollama.ai) installed and running locally, with the model pulled:
