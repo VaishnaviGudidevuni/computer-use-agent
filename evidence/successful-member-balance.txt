@@ -1,0 +1,8 @@
+Member Detail
+Member ID	10001
+Name	Priya Shah
+Current Balance	$4520.75
+
+Open a new sub-account for this member
+
+Back to search
