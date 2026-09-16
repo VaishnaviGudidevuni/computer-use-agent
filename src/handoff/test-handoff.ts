@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
-import { HandoffController } from "./controller";
+import {
+  HandoffController,
+} from "./controller";
 import readline from "readline";
 
 async function waitForEnter(
@@ -26,7 +28,7 @@ async function main() {
   /*
    * Start a visible browser.
    *
-   * This represents the SAME live browser session
+   * This is the SAME live browser session
    * that the automation agent would be using.
    */
   const browser =
@@ -47,6 +49,12 @@ async function main() {
     "http://localhost:4000",
   );
 
+  const goal =
+    "Look up member 10001 and return their current balance.";
+
+  const currentStep =
+    "Waiting for human intervention.";
+
   const handoff =
     new HandoffController();
 
@@ -58,18 +66,24 @@ async function main() {
    * Simulate the agent reaching a situation
    * where human intervention is required.
    */
-  handoff.requestHandoff(
-    "agent_uncertain",
-  );
+  handoff.requestHandoff({
+    goal,
+    currentStep,
+    reason: "agent_uncertain",
+    currentUrl: page.url(),
+  });
 
   console.log(
     `After handoff: ${handoff.getState()}`,
   );
 
   /*
-   * Transfer control to the human operator.
+   * Give the human control of the SAME
+   * live browser session.
    */
-  handoff.takeHumanControl();
+  handoff.takeHumanControl(
+    page.url(),
+  );
 
   console.log(
     `Human control: ${handoff.getState()}`,
@@ -84,12 +98,18 @@ async function main() {
   );
 
   /*
-   * IMPORTANT:
-   * Keep the browser open while the human is
-   * interacting with the application.
+   * Wait for the human to finish.
    */
   await waitForEnter(
     "\nPress ENTER when the human has finished their intervention and the agent may resume: ",
+  );
+
+  /*
+   * Record the browser state after the
+   * human intervention.
+   */
+  handoff.recordHumanIntervention(
+    page.url(),
   );
 
   /*
@@ -102,7 +122,7 @@ async function main() {
   );
 
   /*
-   * The automation can now continue using
+   * The automation can continue using
    * the SAME page and browser session.
    */
   handoff.complete();
@@ -111,9 +131,6 @@ async function main() {
     `Final state: ${handoff.getState()}`,
   );
 
-  /*
-   * Close the browser after the workflow is complete.
-   */
   await browser.close();
 }
 
