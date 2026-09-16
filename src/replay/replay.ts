@@ -1,5 +1,7 @@
 import { Page, Locator } from "playwright";
 import { Artifact } from "../artifact/schema";
+import fs from "fs";
+import path from "path";
 
 export type ReplayResult =
   | {
@@ -126,6 +128,24 @@ export class ReplayEngine {
         `[REPLAY ERROR] ${message}`,
       );
 
+      /*
+       * Save richer evidence for unexpected replay
+       * failures. This includes:
+       * - screenshot
+       * - current URL
+       * - visible page text
+       * - failed step
+       * - error message
+       */
+      await this.captureFailureEvidence(
+        currentStepId,
+        message,
+      );
+
+      /*
+       * A missing member is a valid business outcome,
+       * not a technical replay failure.
+       */
       if (
         message.includes("No member found")
       ) {
@@ -141,6 +161,107 @@ export class ReplayEngine {
         stepId: currentStepId,
         message,
       };
+    }
+  }
+
+  private async captureFailureEvidence(
+    stepId: string,
+    message: string,
+  ): Promise<void> {
+    try {
+      const evidenceDir = path.join(
+        process.cwd(),
+        "evidence",
+        "replay-failures",
+      );
+
+      fs.mkdirSync(
+        evidenceDir,
+        { recursive: true },
+      );
+
+      const timestamp =
+        new Date()
+          .toISOString()
+          .replace(/[:.]/g, "-");
+
+      const baseName =
+        `failure-${timestamp}-${stepId}`;
+
+      /*
+       * Screenshot
+       */
+      await this.page.screenshot({
+        path: path.join(
+          evidenceDir,
+          `${baseName}.png`,
+        ),
+        fullPage: true,
+      });
+
+      /*
+       * DOM / visible text evidence
+       */
+      const pageText =
+        await this.page
+          .locator("body")
+          .innerText()
+          .catch(() => "");
+
+      fs.writeFileSync(
+        path.join(
+          evidenceDir,
+          `${baseName}.txt`,
+        ),
+        pageText,
+        "utf8",
+      );
+
+      /*
+       * Structured failure metadata.
+       */
+      const metadata = {
+        timestamp:
+          new Date().toISOString(),
+        stepId,
+        message,
+        url: this.page.url(),
+      };
+
+      fs.writeFileSync(
+        path.join(
+          evidenceDir,
+          `${baseName}.json`,
+        ),
+        JSON.stringify(
+          metadata,
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      console.log(
+        `[EVIDENCE] Failure screenshot saved: evidence/replay-failures/${baseName}.png`,
+      );
+
+      console.log(
+        `[EVIDENCE] Failure page text saved: evidence/replay-failures/${baseName}.txt`,
+      );
+
+      console.log(
+        `[EVIDENCE] Failure metadata saved: evidence/replay-failures/${baseName}.json`,
+      );
+    } catch (evidenceError) {
+      /*
+       * Evidence capture must never hide the original
+       * replay error.
+       */
+      console.error(
+        "[EVIDENCE ERROR] Could not capture failure evidence.",
+      );
+
+      console.error(evidenceError);
     }
   }
 
@@ -220,7 +341,11 @@ export class ReplayEngine {
     const locator =
       await this.findTarget(target);
 
-    await locator.click();
+    await locator.dispatchEvent("click");
+
+    await this.page.waitForLoadState(
+      "domcontentloaded",
+    );
   }
 
   private async type(
@@ -243,10 +368,12 @@ export class ReplayEngine {
         parameters,
       );
 
-    await locator.fill(resolvedValue);
+    await locator.fill(
+      resolvedValue,
+    );
 
     console.log(
-      `[TYPE] Entered value for parameterized field.`,
+      "[TYPE] Entered value for parameterized field.",
     );
   }
 
@@ -377,6 +504,7 @@ export class ReplayEngine {
               strategy.value.split(":");
 
             const role = parts[0];
+
             const name =
               parts.slice(1).join(":");
 
@@ -472,18 +600,52 @@ export class ReplayEngine {
         "Member search result",
       )
     ) {
-      await this.page.waitForURL(
-        /\/members\/\d+/,
-        {
-          timeout: 5000,
-        },
+      await this.page.waitForLoadState(
+        "domcontentloaded",
       );
+
+      await this.page.waitForTimeout(
+        300,
+      );
+
+      const bodyText =
+        await this.page
+          .locator("body")
+          .innerText();
 
       console.log(
-        "[CHECKPOINT PASSED] Member details page is open.",
+        `[CHECKPOINT] Page text:\n${bodyText}`,
       );
 
-      return;
+      if (
+        bodyText.includes(
+          "No member found",
+        )
+      ) {
+        console.log(
+          "[CHECKPOINT] Business outcome detected: member not found.",
+        );
+
+        throw new Error(
+          "No member found",
+        );
+      }
+
+      if (
+        /\/members\/\d+/.test(
+          this.page.url(),
+        )
+      ) {
+        console.log(
+          "[CHECKPOINT PASSED] Member details page is open.",
+        );
+
+        return;
+      }
+
+      throw new Error(
+        `Member search completed but no recognized result was found. Current URL: ${this.page.url()}`,
+      );
     }
 
     if (

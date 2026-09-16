@@ -1,0 +1,30 @@
+[
+  {
+    "step": 1,
+    "observation": "Core Banking Portal\n\nUsername:\t\nPassword:\t\n",
+    "decision": {
+      "type": "login"
+    },
+    "action": "login",
+    "timestamp": "2026-09-16T19:06:51.716Z"
+  },
+  {
+    "step": 2,
+    "observation": "Member Search\n\nMember ID:  \n\n(Try member IDs: 10001, 10002, 10003)",
+    "decision": {
+      "type": "search_member",
+      "memberId": "10001"
+    },
+    "action": "search_member",
+    "timestamp": "2026-09-16T19:08:44.375Z"
+  },
+  {
+    "step": 3,
+    "observation": "Member Detail\nMember ID\t10001\nName\tPriya Shah\nCurrent Balance\t$4520.75\n\nOpen a new sub-account for this member\n\nBack to search",
+    "decision": {
+      "type": "extract_member"
+    },
+    "action": "extract_member",
+    "timestamp": "2026-09-16T19:09:39.123Z"
+  }
+]
