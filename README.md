@@ -14,6 +14,10 @@ computer-use-agent/
 ├── artifacts/
 │   └── lookup-member-balance.json
 ├── evidence/
+│   ├── discovery-run.json
+│   ├── discovery-success.png
+│   ├── handoff/
+│   ├── replay-failures/
 │   ├── successful-member-balance.png
 │   ├── successful-member-balance.html
 │   └── successful-member-balance.txt
@@ -40,3 +44,10 @@ computer-use-agent/
 ├── target-app/
 ├── package.json
 └── tsconfig.json
+```
+
+## Setup
+
+**Requirements**
+- Node.js 18+
+- [Ollama](https://ollama.ai) installed and running locally, with the model pulled:
