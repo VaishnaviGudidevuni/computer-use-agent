@@ -1,7 +1,7 @@
 {
   "id": "lookup-member-balance",
   "name": "Look Up Member Balance",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Look up a member and return their current balance.",
   "target": {
     "appName": "Legacy Mock Bank",
