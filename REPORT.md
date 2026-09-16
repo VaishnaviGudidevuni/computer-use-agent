@@ -209,7 +209,7 @@ The system also avoids printing credential values to logs. Credentials are suppl
 
 A production system should additionally integrate secret management, audit logging, authorization boundaries, and stronger confirmation requirements for irreversible financial actions.
 
-## Evidence
+### Evidence
 
 The `evidence/` directory contains evidence captured from the successful banking workflow.
 
